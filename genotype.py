@@ -14,6 +14,7 @@ class Genotype:
         self.w = w
         self.h = h
         self.shapes: list[SVGShape] = []
+        self.fitness: float | None = None
         
     def clone(self):
         """
@@ -21,7 +22,9 @@ class Genotype:
         """
         new_geno = Genotype(self.w, self.h)
         new_geno.shapes = [shape.copy() for shape in self.shapes]
-        return new_geno
+        new_geno.fitness = self.fitness
+        return new_geno 
+
 
 
 class SVGShape:
