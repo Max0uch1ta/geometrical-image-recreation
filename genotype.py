@@ -132,6 +132,34 @@ class Ellipse(SVGShape):
         return f'<ellipse cx="{self.cx}" cy="{self.cy}" rx="{self.rx}" ry="{self.ry}" {self._style()} />'
     
     
+
     def copy(self):
         return Ellipse(self.cx, self.cy, self.rx, self.ry, self.fill, self.opacity)
+
+
+class Triangle(SVGShape):
+    """Represents an SVG Triangle defined by 3 points."""
+
+    def __init__(self, x1: int, y1: int, x2: int, y2: int, x3: int, y3: int, fill: tuple[int, int, int], opacity: float = 1.0):
+        super().__init__(fill, opacity)
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.x3 = x3
+        self.y3 = y3
+
+    def set_points(self, x1: int, y1: int, x2: int, y2: int, x3: int, y3: int):
+        """Updates the triangle vertices."""
+        self.x1, self.y1 = x1, y1
+        self.x2, self.y2 = x2, y2
+        self.x3, self.y3 = x3, y3
+
+    def to_svg(self) -> str:
+        points = f"{self.x1},{self.y1} {self.x2},{self.y2} {self.x3},{self.y3}"
+        return f'<polygon points="{points}" {self._style()} />'
+    
+    def copy(self):
+        return Triangle(self.x1, self.y1, self.x2, self.y2, self.x3, self.y3, self.fill, self.opacity)
+
 

@@ -2,6 +2,8 @@
 
 Application Python pour recréer des images en utilisant des formes géométriques via des algorithmes d'optimisation.
 
+**NOTE:** Le rapport est disponible dans le fichier `docs/rapport.md`.
+
 ## Installation
 
 ```bash
@@ -17,6 +19,8 @@ pip install -r requirements.txt
 | tqdm | ≥4.60.0 | Barres de progression |
 | pandas | - | Tableaux de résumé (notebook) |
 | matplotlib | - | Graphiques (notebook) |
+
+**NOTE:** Je n'ai pas demander si vous aviez tqdm d'installer donc j'ai ajouté un bloc try/except pour éviter les erreurs si tqdm n'est pas installé. Vous n'aurez pas de barres de progression si tqdm n'est pas installé.
 
 ## Utilisation
 
@@ -44,12 +48,14 @@ python main.py -i image.png -a ga_greedy -p 50 -n 500
 | `--algorithm` | `-a` | Algorithme : `hill_climbing`, `simulated_annealing`, `ga_greedy`, `ga_tournament` |
 | `--max-iter` | `-n` | Nombre maximum d'itérations |
 | `--max-time` | `-T` | Temps maximum en minutes |
-| `--shape` | `-s` | Type de forme : `rect`, `circle`, `ellipse` |
+| `--shape` | `-s` | Type de forme : `rect`, `circle`, `ellipse`, `triangle` |
 | `--pop-size` | `-p` | Taille de la population (AG) |
 | `--fitness` | `-f` | Métrique : `l1` (Manhattan) ou `l2` (SSD) |
 | `--heuristic` | `-H` | Initialisation heuristique (AG) |
-| `--use-opacity` | `-o` | Activer l'opacité (50%-100%) |
+| `--use-opacity` | `-o` | Activer l'opacité (50%-100%) aléatoire sur les formes |
 | `--track-by-time` | `-t` | Suivi par temps écoulé |
+| `--show-loss` | - | Afficher le graphique de fitness (Matplotlib) |
+| `--print-history` | - | Afficher l'historique tabulaire dans la console |
 
 ### Exemples avancés
 
@@ -63,6 +69,11 @@ python main.py -i image.png -a hill_climbing -s ellipse --use-opacity
 # AG avec initialisation heuristique et métrique L1
 python main.py -i image.png -a ga_tournament --heuristic -f l1
 ```
+
+## Résultats
+
+Les images générées sont automatiquement sauvegardées dans le dossier `./output`.
+Le nom du fichier inclut l'algorithme utilisé et un horodatage.
 
 ## Notebook de comparaison
 

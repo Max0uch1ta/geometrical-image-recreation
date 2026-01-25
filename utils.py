@@ -1,7 +1,19 @@
 import numpy as np
 import random
-from genotype import Genotype, SVGShape, Rect, Circle, Ellipse
-from tqdm import tqdm
+from genotype import Genotype, SVGShape, Rect, Circle, Ellipse, Triangle
+try:
+    from tqdm import tqdm
+except ImportError:
+    # Dummy tqdm if not installed
+    class tqdm:
+        def __init__(self, iterable=None, desc=None, *args, **kwargs):
+            self.iterable = iterable if iterable else []
+        
+        def __iter__(self):
+            return iter(self.iterable)
+            
+        def set_postfix(self, *args, **kwargs):
+            pass
 from PIL import Image, ImageDraw
 
 def load_img(image_path: str, max_size=512):
@@ -54,6 +66,13 @@ def get_random_shape(shape_class: type[SVGShape], w_img: int, h_img: int, min_si
         cx = random.randint(rx, w_img - rx)
         cy = random.randint(ry, h_img - ry)
         return Ellipse(cx, cy, rx, ry, fill=color, opacity=opacity)
+
+    elif shape_class == Triangle:
+        # Generate 3 random points within the image
+        x1, y1 = random.randint(0, w_img), random.randint(0, h_img)
+        x2, y2 = random.randint(0, w_img), random.randint(0, h_img)
+        x3, y3 = random.randint(0, w_img), random.randint(0, h_img)
+        return Triangle(x1, y1, x2, y2, x3, y3, fill=color, opacity=opacity)
 
     else:
         raise ValueError(f"Unknown shape type: {shape_class}")
@@ -113,13 +132,26 @@ def apply_mutation(gen: Genotype, shape_class: type[SVGShape], mutation_type: st
             new_r = random.randint(12, max_r)
             shape.set_size(new_r)
             
-        elif isinstance(shape, Ellipse):
-            # Randomize both radii
-            max_rx = gen.w // 2
-            max_ry = gen.h // 2
-            new_rx = random.randint(12, max_rx)
             new_ry = random.randint(12, max_ry)
             shape.set_size(new_rx, new_ry)
+
+        elif isinstance(shape, Triangle):
+            # "Resize" for a triangle = generate new points around the centroid
+            # 1. Calculate centroid
+            cx = (shape.x1 + shape.x2 + shape.x3) // 3
+            cy = (shape.y1 + shape.y2 + shape.y3) // 3
+            
+            # 2. Generate new offsets (radius of the triangle "spread")
+            spread = random.randint(10, min(gen.w, gen.h) // 4)
+            
+            def get_pt(c, s):
+                return max(0, min(gen.w if c == cx else gen.h, c + random.randint(-s, s)))
+
+            shape.set_points(
+                get_pt(cx, spread), get_pt(cy, spread),
+                get_pt(cx, spread), get_pt(cy, spread),
+                get_pt(cx, spread), get_pt(cy, spread)
+            )
 
     # CASE 4: REMOVE A SHAPE
     elif mutation_type == "remove" and len(gen.shapes) > 0:
@@ -181,6 +213,15 @@ def initialize_grid(original_img: np.ndarray, w: int, h: int, shape_class: type[
                 rx = curr_w // 2
                 ry = curr_h // 2
                 shape = Ellipse(cx, cy, rx, ry, color_tuple)
+                
+            elif shape_class == Triangle:
+                # Triangle fitting the cell (Top-Mid, Bot-Left, Bot-Right)
+                curr_w = x_end - x_start
+                curr_h = y_end - y_start
+                x1, y1 = x_start + curr_w // 2, y_start
+                x2, y2 = x_start, y_end
+                x3, y3 = x_end, y_end
+                shape = Triangle(x1, y1, x2, y2, x3, y3, color_tuple)
 
             geno.shapes.append(shape)
             
@@ -238,6 +279,16 @@ def get_jittered_grid_individual(w: int, h: int, shape_class: type[SVGShape], gr
                 rx = random.randint(5, max(5, cell_w // 2))
                 ry = random.randint(5, max(5, cell_h // 2))
                 shape = Ellipse(cx, cy, rx, ry, (128, 128, 128), opacity)
+
+            elif shape_class == Triangle:
+                 # Jittered triangle points
+                x1 = clip(cell_x_start + (cell_w // 2) + jx, 0, w)
+                y1 = clip(cell_y_start + jy, 0, h)
+                x2 = clip(cell_x_start + jx, 0, w)
+                y2 = clip(cell_y_end + jy, 0, h)
+                x3 = clip(cell_x_end + jx, 0, w)
+                y3 = clip(cell_y_end + jy, 0, h)
+                shape = Triangle(x1, y1, x2, y2, x3, y3, (128, 128, 128), opacity)
 
             # Sample a RANDOM pixel from the grid cell
             if original_img is not None:
@@ -324,6 +375,9 @@ def generate_phenotype(width, height, genotype):
             x1 = shape.cx + shape.rx
             y1 = shape.cy + shape.ry
             draw.ellipse([x0, y0, x1, y1], fill=fill_rgba)
+        
+        elif isinstance(shape, Triangle):
+            draw.polygon([(shape.x1, shape.y1), (shape.x2, shape.y2), (shape.x3, shape.y3)], fill=fill_rgba)
         
         # Alpha composite this layer onto the canvas
         canvas = Image.alpha_composite(canvas, layer)

@@ -16,10 +16,6 @@ import time
 from typing import Literal
 
 import numpy as np
-from tqdm import tqdm
-
-from genotype import Genotype, SVGShape, Rect, Circle, Ellipse
-from mutation import apply_mutation
 from utils import (
     load_img,
     get_random_shape,
@@ -28,6 +24,7 @@ from utils import (
     compute_fitness,
     compute_fitness_l1,
     get_jittered_grid_individual,
+    tqdm,  # Import robust tqdm
 )
 
 
@@ -40,7 +37,7 @@ def hill_climbing(
     original_img: np.ndarray,
     shape_class: type[SVGShape],
     max_it: int = 1000,
-    patience: int = 200,
+    patience: int = 1000,
     track_by_time: bool = False,
     use_opacity: bool = False,
     fitness_fn=None,
