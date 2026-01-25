@@ -28,14 +28,16 @@ class Genotype:
 
 
 class SVGShape:
-    """Base class handling the mandatory fill color."""
+    """Base class handling the mandatory fill color and opacity."""
 
-    def __init__(self, fill: tuple[int, int, int]):
+    def __init__(self, fill: tuple[int, int, int], opacity: float = 1.0):
         """
         Args:
             fill: Mandatory RGB tuple (r, g, b).
+            opacity: Transparency level (0.0-1.0, where 1.0 is fully opaque).
         """
         self.fill = fill
+        self.opacity = max(0.0, min(1.0, opacity))  # Clamp to valid range
 
     def set_color(self, fill: tuple[int, int, int]):
         """
@@ -46,20 +48,24 @@ class SVGShape:
         """
         self.fill = fill
 
+    def set_opacity(self, opacity: float):
+        """Updates the shape's opacity (0.0-1.0)."""
+        self.opacity = max(0.0, min(1.0, opacity))
+
     def _color_str(self) -> str:
         """Converts the fill tuple to 'rgb(r,g,b)' string."""
         r, g, b = self.fill
         return f"rgb({r},{g},{b})"
 
     def _style(self) -> str:
-        """Returns the SVG style string."""
-        return f'fill="{self._color_str()}"'
+        """Returns the SVG style string with opacity."""
+        return f'fill="{self._color_str()}" fill-opacity="{self.opacity}"'
     
 class Rect(SVGShape):
     """Represents an SVG Rectangle."""
 
-    def __init__(self, x: int, y: int, w: int, h: int, fill: tuple[int, int, int]):
-        super().__init__(fill)
+    def __init__(self, x: int, y: int, w: int, h: int, fill: tuple[int, int, int], opacity: float = 1.0):
+        super().__init__(fill, opacity)
         self.x = x
         self.y = y
         self.w = w
@@ -78,13 +84,13 @@ class Rect(SVGShape):
         return f'<rect x="{self.x}" y="{self.y}" width="{self.w}" height="{self.h}" {self._style()} />'
     
     def copy(self):
-        return Rect(self.x, self.y, self.w, self.h, self.fill)
+        return Rect(self.x, self.y, self.w, self.h, self.fill, self.opacity)
 
 class Circle(SVGShape):
     """Represents an SVG Circle."""
 
-    def __init__(self, cx: int, cy: int, r: int, fill: tuple[int, int, int]):
-        super().__init__(fill)
+    def __init__(self, cx: int, cy: int, r: int, fill: tuple[int, int, int], opacity: float = 1.0):
+        super().__init__(fill, opacity)
         self.cx = cx
         self.cy = cy
         self.r = r
@@ -101,13 +107,13 @@ class Circle(SVGShape):
         return f'<circle cx="{self.cx}" cy="{self.cy}" r="{self.r}" {self._style()} />'
     
     def copy(self):
-        return Circle(self.cx, self.cy, self.r, self.fill)
+        return Circle(self.cx, self.cy, self.r, self.fill, self.opacity)
 
 class Ellipse(SVGShape):
     """Represents an SVG Ellipse."""
 
-    def __init__(self, cx: int, cy: int, rx: int, ry: int, fill: tuple[int, int, int]):
-        super().__init__(fill)
+    def __init__(self, cx: int, cy: int, rx: int, ry: int, fill: tuple[int, int, int], opacity: float = 1.0):
+        super().__init__(fill, opacity)
         self.cx = cx
         self.cy = cy
         self.rx = rx
@@ -127,5 +133,5 @@ class Ellipse(SVGShape):
     
     
     def copy(self):
-        return Ellipse(self.cx, self.cy, self.rx, self.ry, self.fill)
+        return Ellipse(self.cx, self.cy, self.rx, self.ry, self.fill, self.opacity)
 

@@ -22,12 +22,14 @@ def load_img(image_path: str, max_size=512):
     return (grid, w, h)
 
 
-def get_random_shape(shape_class: type[SVGShape], w_img: int, h_img: int, min_size: int = 25) -> SVGShape:
+def get_random_shape(shape_class: type[SVGShape], w_img: int, h_img: int, min_size: int = 25, use_opacity: bool = False) -> SVGShape:
     """
-    Generates a random shape (Rect, Circle, Ellipse) with randomized size and position.
+    Generates a random shape (Rect, Circle, Ellipse) with randomized size, position, and optionally opacity.
     """
     # Random color (R, G, B)
     color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    # Random opacity between 50% and 100% (only if enabled)
+    opacity = random.uniform(0.5, 1.0) if use_opacity else 1.0
     
     if shape_class == Rect:
         w = random.randint(min_size, w_img)
@@ -35,14 +37,14 @@ def get_random_shape(shape_class: type[SVGShape], w_img: int, h_img: int, min_si
         # Ensure x,y are within bounds
         x = random.randint(0, max(0, w_img - w))
         y = random.randint(0, max(0, h_img - h))
-        return Rect(x, y, w, h, fill=color)
+        return Rect(x, y, w, h, fill=color, opacity=opacity)
         
     elif shape_class == Circle:
         max_r = min(w_img, h_img) // 2
         r = random.randint(min_size // 2, max(min_size // 2 + 1, max_r))
         cx = random.randint(r, w_img - r)
         cy = random.randint(r, h_img - r)
-        return Circle(cx, cy, r, fill=color)
+        return Circle(cx, cy, r, fill=color, opacity=opacity)
         
     elif shape_class == Ellipse:
         max_rx = w_img // 2
@@ -51,7 +53,7 @@ def get_random_shape(shape_class: type[SVGShape], w_img: int, h_img: int, min_si
         ry = random.randint(min_size // 2, max(min_size // 2 + 1, max_ry))
         cx = random.randint(rx, w_img - rx)
         cy = random.randint(ry, h_img - ry)
-        return Ellipse(cx, cy, rx, ry, fill=color)
+        return Ellipse(cx, cy, rx, ry, fill=color, opacity=opacity)
 
     else:
         raise ValueError(f"Unknown shape type: {shape_class}")
@@ -185,6 +187,69 @@ def initialize_grid(original_img: np.ndarray, w: int, h: int, shape_class: type[
     return geno
 
 
+def get_jittered_grid_individual(w: int, h: int, shape_class: type[SVGShape], grid_size: int = 5, 
+                                  jitter_amount: int = 5, original_img: np.ndarray = None,
+                                  use_opacity: bool = False) -> Genotype:
+    """
+    Creates an individual with shapes arranged in a jittered grid.
+    Samples a random pixel from within the grid cell to determine its color.
+    This provides a heuristic starting point for genetic algorithms.
+    """
+    def clip(val, min_val, max_val):
+        return max(min_val, min(val, max_val))
+    
+    geno = Genotype(w, h)
+    
+    cell_w = w // grid_size
+    cell_h = h // grid_size
+    
+    for r in range(grid_size):
+        for c in range(grid_size):
+            # Grid cell boundaries
+            cell_x_start = c * cell_w
+            cell_y_start = r * cell_h
+            cell_x_end = min((c + 1) * cell_w, w - 1)
+            cell_y_end = min((r + 1) * cell_h, h - 1)
+            
+            # Add jitter to position
+            jx = random.randint(-jitter_amount, jitter_amount)
+            jy = random.randint(-jitter_amount, jitter_amount)
+            
+            # Random opacity (50%-100%) if enabled
+            opacity = random.uniform(0.5, 1.0) if use_opacity else 1.0
+            
+            # Create the shape based on type
+            if shape_class == Rect:
+                final_x = clip(cell_x_start + jx, 0, w - 1)
+                final_y = clip(cell_y_start + jy, 0, h - 1)
+                final_w = clip(cell_w + random.randint(-5, 5), 1, w - final_x)
+                final_h = clip(cell_h + random.randint(-5, 5), 1, h - final_y)
+                shape = Rect(final_x, final_y, final_w, final_h, (128, 128, 128), opacity)
+                
+            elif shape_class == Circle:
+                cx = clip(cell_x_start + (cell_w // 2) + jx, 0, w)
+                cy = clip(cell_y_start + (cell_h // 2) + jy, 0, h)
+                r_size = random.randint(5, max(5, cell_w // 2))
+                shape = Circle(cx, cy, r_size, (128, 128, 128), opacity)
+                
+            elif shape_class == Ellipse:
+                cx = clip(cell_x_start + (cell_w // 2) + jx, 0, w)
+                cy = clip(cell_y_start + (cell_h // 2) + jy, 0, h)
+                rx = random.randint(5, max(5, cell_w // 2))
+                ry = random.randint(5, max(5, cell_h // 2))
+                shape = Ellipse(cx, cy, rx, ry, (128, 128, 128), opacity)
+
+            # Sample a RANDOM pixel from the grid cell
+            if original_img is not None:
+                sample_x = random.randint(cell_x_start, cell_x_end)
+                sample_y = random.randint(cell_y_start, cell_y_end)
+                pixel_color = original_img[sample_y, sample_x]
+                shape.set_color(tuple(pixel_color.astype(int)))
+            
+            geno.shapes.append(shape)
+            
+    return geno
+
 
 def local_search(geno: Genotype, original_img: np.ndarray, shape_class: type[SVGShape], max_it: int = 1000, patience: int = 200) -> Genotype:
     
@@ -226,47 +291,66 @@ def local_search(geno: Genotype, original_img: np.ndarray, shape_class: type[SVG
 
 
 def generate_phenotype(width, height, genotype):
-    # Create a blank image (canvas) to draw on. 
-    img = Image.new("RGB", (width, height), "black") 
-    draw = ImageDraw.Draw(img)
+    """
+    Renders shapes onto a canvas with proper alpha compositing.
+    """
+    # Create a blank RGBA canvas (black background, fully opaque)
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 255))
 
     for shape in genotype:
-        # We render each shape 
+        # Create a temporary RGBA layer for this shape
+        layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        
+        # Convert opacity (0.0-1.0) to alpha (0-255)
+        alpha = int(shape.opacity * 255)
+        fill_rgba = (*shape.fill, alpha)
         
         if isinstance(shape, Rect):
-            # From (x, y, w, h) to (x0, y0, x1, y1)
             x1 = shape.x + shape.w
             y1 = shape.y + shape.h
-            draw.rectangle([shape.x, shape.y, x1, y1], fill=shape.fill)
+            draw.rectangle([shape.x, shape.y, x1, y1], fill=fill_rgba)
             
         elif isinstance(shape, Circle):
-            # (cx-r, cy-r, cx+r, cy+r)
             x0 = shape.cx - shape.r
             y0 = shape.cy - shape.r
             x1 = shape.cx + shape.r
             y1 = shape.cy + shape.r
-            draw.ellipse([x0, y0, x1, y1], fill=shape.fill)
+            draw.ellipse([x0, y0, x1, y1], fill=fill_rgba)
 
         elif isinstance(shape, Ellipse):
-            # (cx-rx, cy-ry, cx+rx, cy+ry)
             x0 = shape.cx - shape.rx
             y0 = shape.cy - shape.ry
             x1 = shape.cx + shape.rx
             y1 = shape.cy + shape.ry
-            draw.ellipse([x0, y0, x1, y1], fill=shape.fill)
+            draw.ellipse([x0, y0, x1, y1], fill=fill_rgba)
+        
+        # Alpha composite this layer onto the canvas
+        canvas = Image.alpha_composite(canvas, layer)
 
-    # Convert back to a nparray for fitness calc
-    return np.array(img)
+    # Convert back to RGB (discard alpha) for fitness calculation
+    return np.array(canvas.convert("RGB"))
 
 
 # Calculate distance between phenotype and original image
-# TODO: Check if other fitness calc are worth it
 def compute_fitness(target, candidate):
     """
-    Computes the Sum of Squared Differences between two img and phenotype.
+    L2 Norm (Sum of Squared Differences).
+    Penalizes large errors more aggressively.
     """
     # Cast to int64 because of squares
     diff = target.astype(np.int64) - candidate.astype(np.int64)
     
     # Square the differences and sum them up (L2 Norm penalizes large diff)
     return np.sum(diff ** 2)
+
+
+def compute_fitness_l1(target, candidate):
+    """
+    L1 Norm (Manhattan Distance).
+    Penalizes errors linearly. Less aggressive on outliers.
+    """
+    # Still need int64 to avoid overflow during subtraction
+    diff = target.astype(np.int64) - candidate.astype(np.int64)
+    
+    return np.sum(np.abs(diff))

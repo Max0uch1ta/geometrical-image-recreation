@@ -18,11 +18,11 @@ def _get_bounds(shape: SVGShape) -> tuple[int, int, int, int]:
     return 0, 0, 1, 1
 
 
-def mutate_add_shape(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None):
+def mutate_add_shape(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None, use_opacity: bool = False):
     """
     Adds a new shape using 'Smart Color' (averaging the pixels it covers) if image is provided.
     """
-    new_shape = get_random_shape(shape_class, gen.w, gen.h)
+    new_shape = get_random_shape(shape_class, gen.w, gen.h, use_opacity=use_opacity)
     
     if original_img is not None:
         # Get bounding box
@@ -89,8 +89,18 @@ def mutate_recolor_shape(gen: Genotype):
     shape.set_color(new_color)
 
 
+def mutate_opacity_shape(gen: Genotype):
+    """
+    Randomizes the opacity of a shape (50%-100%).
+    """
+    shape = random.choice(gen.shapes)
+    new_opacity = random.uniform(0.5, 1.0)
+    shape.set_opacity(new_opacity)
+
+
 def apply_mutation(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None, 
-                   mutation_type: str = "random", delta_scale: float = 0.1, move_range: int = 10):
+                   mutation_type: str = "random", delta_scale: float = 0.1, move_range: int = 10,
+                   use_opacity: bool = False):
     """
     Applies a mutation to the genotype in-place.
     
@@ -101,21 +111,26 @@ def apply_mutation(gen: Genotype, shape_class: type[SVGShape], original_img: np.
         mutation_type: Specific mutation or 'random'.
         delta_scale: Percentage (0.0-1.0) to resize shapes by.
         move_range: Max pixels to move shapes by.
+        use_opacity: If True, include opacity mutations in random options.
     """
     if not gen.shapes:
         mutation_type = "add"
     
     if mutation_type == "random":
-        # Pure uniform random choice (no weights)
+        # Include opacity mutation only if enabled
         options = ["add", "resize", "move", "recolor"]
+        if use_opacity:
+            options.append("opacity")
         mutation_type = random.choice(options)
 
     # Dispatch to specific function
     if mutation_type == "add":
-        mutate_add_shape(gen, shape_class, original_img)
+        mutate_add_shape(gen, shape_class, original_img, use_opacity=use_opacity)
     elif mutation_type == "resize":
         mutate_resize_shape(gen, delta_scale)
     elif mutation_type == "move":
         mutate_move_shape(gen, move_range)
     elif mutation_type == "recolor":
         mutate_recolor_shape(gen)
+    elif mutation_type == "opacity":
+        mutate_opacity_shape(gen)
