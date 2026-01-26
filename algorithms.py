@@ -16,6 +16,8 @@ import time
 from typing import Literal
 
 import numpy as np
+from genotype import Genotype, SVGShape, Rect, Circle, Ellipse, Triangle
+from mutation import apply_mutation
 from utils import (
     load_img,
     get_random_shape,
@@ -42,6 +44,7 @@ def hill_climbing(
     use_opacity: bool = False,
     fitness_fn=None,
     max_time: float = None,
+    min_size: int = None,
 ) -> tuple[Genotype, list[tuple[float, float]]]:
     """
     Hill Climbing local search - only accepts improving neighbors.
@@ -81,7 +84,7 @@ def hill_climbing(
             break
             
         neighbour = best_geno.clone()
-        apply_mutation(neighbour, shape_class=shape_class, original_img=original_img, use_opacity=use_opacity)
+        apply_mutation(neighbour, shape_class=shape_class, original_img=original_img, use_opacity=use_opacity, min_size=min_size)
         
         neighbour_phenotype = generate_phenotype(neighbour.w, neighbour.h, neighbour.shapes)
         neighbour_score = fitness_fn(original_img, neighbour_phenotype)
@@ -119,6 +122,7 @@ def simulated_annealing(
     use_opacity: bool = False,
     fitness_fn=None,
     max_time: float = None,
+    min_size: int = None,
 ) -> tuple[Genotype, list[tuple[float, float]]]:
     """
     Simulated Annealing - probabilistically accepts worse solutions based on temperature.
@@ -162,7 +166,7 @@ def simulated_annealing(
             break
             
         neighbour = current_geno.clone()
-        apply_mutation(neighbour, shape_class=shape_class, original_img=original_img, use_opacity=use_opacity)
+        apply_mutation(neighbour, shape_class=shape_class, original_img=original_img, use_opacity=use_opacity, min_size=min_size)
         
         neighbour_phenotype = generate_phenotype(neighbour.w, neighbour.h, neighbour.shapes)
         neighbour_score = fitness_fn(original_img, neighbour_phenotype)
@@ -254,6 +258,7 @@ def genetic_algorithm(
     fitness_fn=None,
     use_heuristic: bool = False,
     max_time: float = None,
+    min_size: int = None,
 ) -> tuple[Genotype, list[tuple[float, float]]]:
     """
     Genetic Algorithm with configurable selection method.
@@ -298,7 +303,8 @@ def genetic_algorithm(
         print("Initializing Population...")
         for _ in range(pop_size):
             geno = Genotype(w, h)
-            geno.shapes.append(get_random_shape(shape_class, w, h, use_opacity=use_opacity))
+            kwargs = {"min_size": min_size} if min_size is not None else {}
+            geno.shapes.append(get_random_shape(shape_class, w, h, use_opacity=use_opacity, **kwargs))
             population.append(geno)
     
     best_global_score = float('inf')
@@ -368,6 +374,7 @@ def genetic_algorithm(
                     delta_scale=0.1,
                     move_range=15,
                     use_opacity=use_opacity,
+                    min_size=min_size,
                 )
                 child.fitness = None  # Invalidate fitness after mutation
             
@@ -389,6 +396,7 @@ def ga_greedy(
     fitness_fn=None,
     use_heuristic: bool = False,
     max_time: float = None,
+    min_size: int = None,
 ) -> tuple[Genotype, list[tuple[float, float]]]:
     """Genetic Algorithm with Greedy (Truncation) selection."""
     return genetic_algorithm(
@@ -403,6 +411,7 @@ def ga_greedy(
         fitness_fn=fitness_fn,
         use_heuristic=use_heuristic,
         max_time=max_time,
+        min_size=min_size,
     )
 
 
@@ -417,6 +426,7 @@ def ga_tournament(
     fitness_fn=None,
     use_heuristic: bool = False,
     max_time: float = None,
+    min_size: int = None,
 ) -> tuple[Genotype, list[tuple[float, float]]]:
     """Genetic Algorithm with Tournament selection."""
     return genetic_algorithm(
@@ -431,4 +441,5 @@ def ga_tournament(
         fitness_fn=fitness_fn,
         use_heuristic=use_heuristic,
         max_time=max_time,
+        min_size=min_size,
     )

@@ -18,11 +18,15 @@ def _get_bounds(shape: SVGShape) -> tuple[int, int, int, int]:
     return 0, 0, 1, 1
 
 
-def mutate_add_shape(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None, use_opacity: bool = False):
+def mutate_add_shape(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None, use_opacity: bool = False, min_size: int = None):
     """
     Adds a new shape using 'Smart Color' (averaging the pixels it covers) if image is provided.
     """
-    new_shape = get_random_shape(shape_class, gen.w, gen.h, use_opacity=use_opacity)
+    kwargs = {}
+    if min_size is not None:
+        kwargs["min_size"] = min_size
+        
+    new_shape = get_random_shape(shape_class, gen.w, gen.h, use_opacity=use_opacity, **kwargs)
     
     if original_img is not None:
         # Get bounding box
@@ -42,7 +46,7 @@ def mutate_add_shape(gen: Genotype, shape_class: type[SVGShape], original_img: n
             
     gen.shapes.append(new_shape)
 
-def mutate_resize_shape(gen: Genotype, delta_scale: float):
+def mutate_resize_shape(gen: Genotype, delta_scale: float, min_size: int = None):
     """
     Incrementally changes the size of a random shape (+/- delta_scale %).
     """
@@ -52,16 +56,19 @@ def mutate_resize_shape(gen: Genotype, delta_scale: float):
         # Calculate mutation amount based on current size
         dw = int(random.uniform(-1, 1) * shape.w * delta_scale) + random.choice([-1, 1])
         dh = int(random.uniform(-1, 1) * shape.h * delta_scale) + random.choice([-1, 1])
-        shape.set_size(clip(shape.w + dw, 5, gen.w), clip(shape.h + dh, 5, gen.h))
+        limit = min_size if min_size is not None else 5
+        shape.set_size(clip(shape.w + dw, limit, gen.w), clip(shape.h + dh, limit, gen.h))
         
     elif isinstance(shape, Circle):
         dr = int(random.uniform(-1, 1) * shape.r * delta_scale) + random.choice([-1, 1])
-        shape.set_size(clip(shape.r + dr, 3, min(gen.w, gen.h) // 2))
+        limit = min_size if min_size is not None else 3
+        shape.set_size(clip(shape.r + dr, limit, min(gen.w, gen.h) // 2))
         
     elif isinstance(shape, Ellipse):
         drx = int(random.uniform(-1, 1) * shape.rx * delta_scale) + random.choice([-1, 1])
         dry = int(random.uniform(-1, 1) * shape.ry * delta_scale) + random.choice([-1, 1])
-        shape.set_size(clip(shape.rx + drx, 3, gen.w // 2), clip(shape.ry + dry, 3, gen.h // 2))
+        limit = min_size if min_size is not None else 3
+        shape.set_size(clip(shape.rx + drx, limit, gen.w // 2), clip(shape.ry + dry, limit, gen.h // 2))
 
 def mutate_move_shape(gen: Genotype, move_range: int):
     """
@@ -100,7 +107,7 @@ def mutate_opacity_shape(gen: Genotype):
 
 def apply_mutation(gen: Genotype, shape_class: type[SVGShape], original_img: np.ndarray = None, 
                    mutation_type: str = "random", delta_scale: float = 0.1, move_range: int = 10,
-                   use_opacity: bool = False):
+                   use_opacity: bool = False, min_size: int = None):
     """
     Applies a mutation to the genotype in-place.
     
@@ -125,9 +132,9 @@ def apply_mutation(gen: Genotype, shape_class: type[SVGShape], original_img: np.
 
     # Dispatch to specific function
     if mutation_type == "add":
-        mutate_add_shape(gen, shape_class, original_img, use_opacity=use_opacity)
+        mutate_add_shape(gen, shape_class, original_img, use_opacity=use_opacity, min_size=min_size)
     elif mutation_type == "resize":
-        mutate_resize_shape(gen, delta_scale)
+        mutate_resize_shape(gen, delta_scale, min_size=min_size)
     elif mutation_type == "move":
         mutate_move_shape(gen, move_range)
     elif mutation_type == "recolor":

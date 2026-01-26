@@ -27,6 +27,8 @@ Là aussi l'ajout de la transparence fut une amélioration notable par rapport �
 
 **Note:** Re-sizer les triangles fut difficile et j'ai du chercher en ligne et utiliser des llms pour trouver une solution.
 
+**Note bis:** Les nouvelles formes ajoutées doivent respecter une taille minimale bien supérieur a 1 pixel (w/h >= 25 pour rect par exemple, radius >= 12px pour ellipse). Lors des differents resizing la taille minimale ne peut pas être inférieur a 5-3 pixel respectivement. C'est nécéssaire pour avoir un probleme qui ne converge pas vers des carré de la taille d'un pixel par exemple. Il est possible de mettre une autre taille par défaut avec le flag `--min-size`.
+
 
 ### 2.2 Phénotype
 Le phénotype est l'image générée à partir du génotype.

@@ -54,6 +54,7 @@ python main.py -i image.png -a ga_greedy -p 50 -n 500
 | `--heuristic` | `-H` | Initialisation heuristique (AG) |
 | `--use-opacity` | `-o` | Activer l'opacité (50%-100%) aléatoire sur les formes |
 | `--track-by-time` | `-t` | Suivi par temps écoulé |
+| `--min-size` | - | Taille minimale des formes (px) |
 | `--show-loss` | - | Afficher le graphique de fitness (Matplotlib) |
 | `--print-history` | - | Afficher l'historique tabulaire dans la console |
 

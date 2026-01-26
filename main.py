@@ -124,6 +124,10 @@ def main():
         "--print-history", action="store_true",
         help="Print tabular fitness history to console"
     )
+    parser.add_argument(
+        "--min-size", type=int, default=None,
+        help="Minimum size (width/height/radius) for shapes. Overrides defaults."
+    )
     
     args = parser.parse_args()
     
@@ -149,7 +153,7 @@ def main():
             start_geno, original_img, shape_class,
             max_it=args.max_iter, track_by_time=args.track_by_time,
             use_opacity=args.use_opacity, fitness_fn=fitness_fn,
-            max_time=max_time_sec
+            max_time=max_time_sec, min_size=args.min_size
         )
         
     elif args.algorithm == "simulated_annealing":
@@ -158,7 +162,7 @@ def main():
             start_geno, original_img, shape_class,
             max_it=args.max_iter, track_by_time=args.track_by_time,
             use_opacity=args.use_opacity, fitness_fn=fitness_fn,
-            max_time=max_time_sec
+            max_time=max_time_sec, min_size=args.min_size
         )
         
     elif args.algorithm == "ga_greedy":
@@ -168,7 +172,7 @@ def main():
             track_by_time=args.track_by_time,
             use_opacity=args.use_opacity, fitness_fn=fitness_fn,
             use_heuristic=args.heuristic,
-            max_time=max_time_sec
+            max_time=max_time_sec, min_size=args.min_size
         )
         
     elif args.algorithm == "ga_tournament":
@@ -178,7 +182,7 @@ def main():
             track_by_time=args.track_by_time,
             use_opacity=args.use_opacity, fitness_fn=fitness_fn,
             use_heuristic=args.heuristic,
-            max_time=max_time_sec
+            max_time=max_time_sec, min_size=args.min_size
         )
     
     # Results and Output Handling
